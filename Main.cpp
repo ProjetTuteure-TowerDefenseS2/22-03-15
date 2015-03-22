@@ -1,4 +1,5 @@
 
+
 #include "constante.h"
 //#include "Carte.h"
 
@@ -53,21 +54,10 @@ int main()
 	Sprite mySprite;
 	mySprite.setTexture(textureTile);
 
-	int map[MAX_LARGEUR_MAP][MAX_HAUTEUR_MAP];
-	int mapRecup[MAX_LARGEUR_MAP][MAX_HAUTEUR_MAP];
-    bool tileBloquant[NB_TILE];
-
 	int tabOuAller[MAX_LARGEUR_MAP * MAX_HAUTEUR_MAP][2];
 	int nbCase;
 
-	chargerMap("./maps/map2.txt", map, tileBloquant);
-	for(int i = 0 ; i < MAX_HAUTEUR_MAP ; i++)
-    {
-        for(int j = 0 ; j < MAX_LARGEUR_MAP ; j++)
-        {
-            mapRecup[j][i] = map[j][i];
-        }
-    }
+
 
 	Sprite tile[NB_TILE];
 
@@ -85,6 +75,11 @@ int main()
     int endroitMonstreX = 0, endroitMonstreY = 0;
 
     bool dep = false, cliqueGauche = false;
+
+    Joueur player;
+
+    Carte mapNum1("./maps/map2.txt", 0, 0);
+    mapNum1.ReinitialiserCarte();
 
 	while (window.isOpen())
 	{
@@ -105,14 +100,7 @@ int main()
                 }
                 else if (event.key.code == sf::Keyboard::Tab  )
                 {
-                    chargerMap("./maps/map2.txt", map, tileBloquant);
-                    for(int i = 0 ; i < MAX_HAUTEUR_MAP ; i++)
-                    {
-                        for(int j = 0 ; j < MAX_LARGEUR_MAP ; j++)
-                        {
-                            mapRecup[j][i] = map[j][i];
-                        }
-                    }
+                    mapNum1.ReinitialiserCarte();
                 }
 
                 if (event.key.code == sf::Keyboard::Numpad1 )
@@ -175,7 +163,7 @@ int main()
                 {
                     cliqueGauche = true;
                     //map[a][b] = imageActu;
-                    if(map[a][b] == 4)
+                    if (mapNum1.getNumCaseMap(a, b) == 4)
                     {
                         tour.setPosition(a * LARGEUR_TILE, b * HAUTEUR_TILE);
                     }
@@ -188,20 +176,15 @@ int main()
                         bool different = false;
 
 
-                        for(int i = 0; i < MAX_LARGEUR_MAP; i++)
-                        {
-                            for(int j = 0; j < MAX_HAUTEUR_MAP; j++)
-                            {
-                                map[i][j] = mapRecup[i][j];
-                            }
-                        }
-                        map[a][b] = 4;
+                        mapNum1.initialiserMap();
+
+                        mapNum1.setNumCaseMap(a, b, 4);
 
                         for(int i = 0; i < MAX_LARGEUR_MAP; i++)
                         {
                             for(int j = 0 ; j < MAX_HAUTEUR_MAP; j++)
                             {
-                                mapTempo[i][j] = map[i][j];
+                                mapTempo[i][j] = mapNum1.getNumCaseMap(i, j);
                             }
                         }
 
@@ -212,21 +195,24 @@ int main()
                         }
 
 
-                        if(dijkstra(endroitMonstreX, endroitMonstreY, zoneArriverX, zoneArriverY, map, tabOuAller, nbCase))
+                        if(dijkstra(endroitMonstreX, endroitMonstreY, zoneArriverX, zoneArriverY, tabOuAller, nbCase, mapNum1))
                         {
                             if(dijkstra(0, 0, zoneArriverX, zoneArriverY, mapTempo, tabOuAllerTempo, nbCaseTempo))
                             {
-                                mapRecup[a][b] = 4;
+                                mapNum1.setNumCaseMapRecup(a, b, 4);
                                 etape = 1;
                             }
                         }
 
-
-                        map[a][b] = mapRecup[a][b];
+                        mapNum1.SetNumCaseMapViaMapRecup(a, b);
 
                     }
                 }
 			}
+			else if (event.mouseButton.button == sf::Mouse::Right)
+            {
+
+            }
 		}
 		else if (event.type == sf::Event::MouseButtonReleased )//MouseButtonReleased pour relacher
 		{
@@ -241,15 +227,9 @@ int main()
         {
             if(etape == 0)
             {
-                for(int i = 0; i < MAX_LARGEUR_MAP; i++)
-                {
-                    for(int j = 0; j < MAX_HAUTEUR_MAP; j++)
-                    {
-                        map[i][j] = mapRecup[i][j];
-                    }
-                }
+                mapNum1.initialiserMap();
 
-                dijkstra(endroitMonstreX, endroitMonstreY, zoneArriverX, zoneArriverY, map, tabOuAller, nbCase);
+                dijkstra(endroitMonstreX, endroitMonstreY, zoneArriverX, zoneArriverY, tabOuAller, nbCase, mapNum1);
                 cout << endl << "posX : " << ennemi.getPosition().x << "posY: " << ennemi.getPosition().y << endl;
                 etape++;
             }
@@ -274,7 +254,7 @@ int main()
 
 
 
-		if(!ennemi.deplacement(clock, tileBloquant, map, etape))///Seulement si la fenetre a le focus
+		if(!ennemi.deplacement(clock, mapNum1, etape))///Seulement si la fenetre a le focus
         {
             cout << endl << "PAS DEPLACEMENT" << endl;
             if(trouveA_B(ennemi.getPosition().x + (LARGEUR_TILE / 2), ennemi.getPosition().y + (HAUTEUR_TILE / 2), a, b) && etape > 1)
@@ -296,10 +276,10 @@ int main()
         {
             for(int j = 0; j < MAX_HAUTEUR_MAP; j++)
             {
-                if(map[i][j] >= 0 || map[i][j] < NB_TILE)
+                if(mapNum1.getNumCaseMap(i, j) >= 0 || mapNum1.getNumCaseMap(i, j) < NB_TILE)
                 {
-                    tile[map[i][j]].setPosition(i * LARGEUR_TILE, j * HAUTEUR_TILE);
-                    window.draw(tile[map[i][j]]);
+                    tile[mapNum1.getNumCaseMap(i, j)].setPosition(i * LARGEUR_TILE, j * HAUTEUR_TILE);
+                    window.draw(tile[mapNum1.getNumCaseMap(i, j)]);
                 }
             }
         }
